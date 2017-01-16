@@ -1,0 +1,7 @@
+[package]
+name = "vdneg"
+version = "0.1.0"
+authors = ["hindsight <hindsight@yandex.ru>"]
+
+[dependencies]
+rand = "0.3"
