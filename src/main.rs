@@ -1,6 +1,12 @@
 mod cards;
+mod combo;
 
 fn main() {
-    let deck = cards::deck_shuffled();
-    println!("{} {}", deck[0].to_short_unicode_string(), deck[1].to_short_unicode_string());
+    let c = combo::Combo{
+        combo_rank: combo::ComboRank::Flush,
+        cards: [cards::ACE_OF_SPADES, cards::KING_OF_SPADES, cards::SEVEN_OF_SPADES,
+            cards::FIVE_OF_SPADES, cards::DEUCE_OF_SPADES]
+    };
+
+    println!("{}", c.to_short_unicode_string());
 }
