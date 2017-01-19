@@ -107,13 +107,22 @@ impl PartialOrd for Combo {
     }
 }
 
+
 /// Detects the best combination that can be picked from a list of cards.
 /// The list has to contain at least 5 cards!
 pub fn detect_combo(cards: &[Card]) -> Combo {
-    if cards.len() < 5 {
-        panic!("Less than 5 cards given to detect_combo!");
-    }
+    assert!(cards.len() >= 5, "less than 5 cards passed to detect_combo");
+    let mut copy = cards.to_vec();
+    detect_high_card(&mut copy)
+}
 
-    panic!("Not implemented yet :(");
+// At least 5 cards are always present
+fn detect_high_card(cards: &mut Vec<Card>) -> Combo {
+    cards.sort_by_key(|c| c.rank);
+    cards.reverse();
+    Combo {
+        combo_rank: ComboRank::HighCard,
+        cards: [cards[0], cards[1], cards[2], cards[3], cards[4]]
+    }
 }
 

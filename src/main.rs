@@ -2,11 +2,13 @@ mod cards;
 mod combo;
 
 fn main() {
-    let c = combo::Combo{
-        combo_rank: combo::ComboRank::Flush,
-        cards: [cards::ACE_OF_SPADES, cards::KING_OF_SPADES, cards::SEVEN_OF_SPADES,
-            cards::FIVE_OF_SPADES, cards::DEUCE_OF_SPADES]
-    };
-
-    println!("{}", c.to_short_unicode_string());
+    let deck = [
+        cards::ACE_OF_SPADES,
+        cards::SEVEN_OF_DIAMONDS,
+        cards::KING_OF_CLUBS,
+        cards::DEUCE_OF_SPADES,
+        cards::THREE_OF_HEARTS,
+    ];
+    let res = combo::detect_combo(&deck);
+    println!("{}", res.to_short_unicode_string());
 }
