@@ -1,5 +1,7 @@
 use std::cmp::Ordering;
 use cards::Card;
+use cards::Rank;
+use cards::Suit;
 
 #[derive(Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum ComboRank {
@@ -112,17 +114,151 @@ impl PartialOrd for Combo {
 /// The list has to contain at least 5 cards!
 pub fn detect_combo(cards: &[Card]) -> Combo {
     assert!(cards.len() >= 5, "less than 5 cards passed to detect_combo");
-    let mut copy = cards.to_vec();
-    detect_high_card(&mut copy)
+
+    if let Some(three_of_kind) = internal::detect_three_of_kind(cards) {
+        three_of_kind
+    } else if let Some(two_pair) = internal::detect_two_pair(cards) {
+        two_pair
+    } else if let Some(pair) = internal::detect_pair(cards) {
+        pair
+    } else {
+        internal::detect_high_card(cards)
+    }
 }
 
-// At least 5 cards are always present
-fn detect_high_card(cards: &mut Vec<Card>) -> Combo {
-    cards.sort_by_key(|c| c.rank);
-    cards.reverse();
-    Combo {
-        combo_rank: ComboRank::HighCard,
-        cards: [cards[0], cards[1], cards[2], cards[3], cards[4]]
+
+mod internal {
+    use super::Combo;
+    use super::ComboRank;
+    use cards::Card;
+    use cards::Rank;
+    use cards::Suit;
+
+    struct RankBasket {
+        rank: Rank,
+        cards: Vec<Card>
     }
+
+    fn split_by_rank(cards: &[Card]) -> Vec<RankBasket> {
+        let mut copy: Vec<Card> = cards.to_vec();
+        copy.sort_by_key(|c| c.rank);
+        copy.reverse();
+        
+        let mut res = Vec::<RankBasket>::with_capacity(13);
+        for c in &copy {
+            let n = res.len();
+            if n > 0 && res[n-1].rank == c.rank {
+                res[n-1].cards.push(c.clone());
+            } else {
+                res.push(RankBasket{rank: c.rank, cards: vec![c.clone()]});
+            }
+        }
+        res
+    }
+
+    fn find_basket(baskets: &mut Vec<RankBasket>, k: usize) -> Option<RankBasket> {
+        let n = baskets.len();
+        for i in 0..n {
+            if baskets[i].cards.len() >= k {
+                return Some(baskets.remove(i));
+            }
+        }
+        None
+    }
+
+    fn join_baskets(baskets: &Vec<RankBasket>) -> Vec<Card> {
+        let mut res = Vec::<Card>::new();
+        for basket in baskets {
+            for card in &basket.cards {
+                res.push(card.clone());
+            }
+        }
+        res
+    }
+
+    fn filter_by_suit(cards: &[Card], suit: Suit) -> Vec<Card> {
+        let mut res = Vec::<Card>::with_capacity(cards.len());
+        for c in cards {
+            if c.suit == suit {
+                res.push(c.clone());
+            }
+        }
+        res
+    }
+
+    fn get_kickers(cards: &[Card], n: usize) -> Vec<Card> {
+        assert!(n <= cards.len(), "not enough cards passed to get_kickers");
+
+        let mut copy: Vec<Card> = cards.to_vec();
+        copy.sort_by_key(|c| c.rank);
+        copy.reverse();
+
+        let mut res = Vec::<Card>::with_capacity(n);
+        for i in 0..n {
+            res.push(copy[i].clone());
+        }
+        res
+    }
+
+    // At least 5 cards are always present
+    pub fn detect_high_card(cards: &[Card]) -> Combo {
+        let kickers = get_kickers(cards, 5);
+        Combo {
+            combo_rank: ComboRank::HighCard,
+            cards: [kickers[0], kickers[1], kickers[2], kickers[3], kickers[4]]
+        }
+    }
+
+    // At least 5 cards are always present
+    pub fn detect_pair(cards: &[Card]) -> Option<Combo> {
+        let mut baskets = split_by_rank(cards);
+        if let Some(pair) = find_basket(&mut baskets, 2) {
+            let remaining = join_baskets(&baskets);
+            let kickers = get_kickers(&remaining, 3);
+            Some( Combo{
+                combo_rank: ComboRank::Pair,
+                cards: [pair.cards[0], pair.cards[1], kickers[0], kickers[1], kickers[2]]
+            } )
+        } else {
+            None
+        }
+    }
+    
+    // At least 5 cards are always present
+    pub fn detect_two_pair(cards: &[Card]) -> Option<Combo> {
+        let mut baskets = split_by_rank(cards);
+        if let Some(pair1) = find_basket(&mut baskets, 2) {
+            if let Some(pair2) = find_basket(&mut baskets, 2) {
+                let remaining = join_baskets(&baskets);
+                let kickers = get_kickers(&remaining, 1);
+                Some( Combo{
+                    combo_rank: ComboRank::TwoPair,
+                    cards: [pair1.cards[0], pair1.cards[1], pair2.cards[0], pair2.cards[1], kickers[0]]
+                } )
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    // At least 5 cards are always present
+    pub fn detect_three_of_kind(cards: &[Card]) -> Option<Combo> {
+        let mut baskets = split_by_rank(cards);
+        if let Some(three) = find_basket(&mut baskets, 3) {
+            let remaining = join_baskets(&baskets);
+            let kickers = get_kickers(&remaining, 2);
+            Some( Combo{
+                combo_rank: ComboRank::ThreeOfKind,
+                cards: [three.cards[0], three.cards[1], three.cards[2], kickers[0], kickers[1]]
+            } )
+        } else {
+            None
+        }
+    }
+
+    // TODO: Consider, for example, AAAAK. detect_three_of_kind is going to panic on this input,
+    //         because find_basket returns you the whole basket with 4 aces. Have to leave one behind!
 }
 
