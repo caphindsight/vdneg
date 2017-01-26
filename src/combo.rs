@@ -160,7 +160,16 @@ mod internal {
         let n = baskets.len();
         for i in 0..n {
             if baskets[i].cards.len() >= k {
-                return Some(baskets.remove(i));
+                let basket_rank = baskets[i].rank;
+                let mut res = Vec::<Card>::with_capacity(k);
+                for i in 0..k {
+                    let el = baskets[i].cards.pop().unwrap();
+                    res.push(el);
+                }
+                if baskets[i].cards.len() == 0 {
+                    baskets.remove(i);
+                }
+                return Some(RankBasket {rank: basket_rank, cards: res});
             }
         }
         None
@@ -257,8 +266,5 @@ mod internal {
             None
         }
     }
-
-    // TODO: Consider, for example, AAAAK. detect_three_of_kind is going to panic on this input,
-    //         because find_basket returns you the whole basket with 4 aces. Have to leave one behind!
 }
 
